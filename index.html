@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+<title>บัญชีรายรับรายจ่ายรายเดือน</title>
+<style>
+  :root{
+    --bg:#f4f6f8;
+    --card:#ffffff;
+    --text:#111827;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --primary:#2563eb;
+    --fixed:#dc2626;
+    --variable:#d97706;
+    --saving:#059669;
+    --remaining:#7c3aed;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif;
+    font-size:16px;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:16px 14px 60px}
+  h1{font-size:24px;margin:4px 0 3px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:15px}
+  .card{
+    background:var(--card);
+    border-radius:18px;
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 2px 10px rgba(15,23,42,.05);
+  }
+  .month-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+  input,select{
+    width:100%;
+    min-height:48px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 12px;
+    font-size:18px;
+    background:#fff;
+    color:var(--text);
+  }
+  input:focus,select:focus{outline:2px solid rgba(37,99,235,.18);border-color:var(--primary)}
+  .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .metric{
+    padding:13px;
+    border-radius:14px;
+    background:#f8fafc;
+  }
+  .metric .name{font-size:13px;color:var(--muted)}
+  .metric .value{font-size:22px;font-weight:750;margin-top:3px}
+  .metric .pct{font-size:12px;color:var(--muted);margin-top:2px}
+  .metric.fixed .value{color:var(--fixed)}
+  .metric.variable .value{color:var(--variable)}
+  .metric.saving .value{color:var(--saving)}
+  .metric.remaining .value{color:var(--remaining)}
+  .section-title{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .section-title h2{font-size:18px;margin:0}
+  .badge{
+    font-size:12px;padding:5px 8px;border-radius:999px;background:#f3f4f6;color:var(--muted)
+  }
+  .row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 130px 34px;
+    gap:8px;
+    align-items:center;
+    margin-bottom:8px;
+  }
+  .row input{font-size:16px;min-height:44px}
+  .amount{text-align:right}
+  .del{
+    border:0;background:#f3f4f6;color:#6b7280;border-radius:10px;
+    width:34px;height:42px;font-size:20px;
+  }
+  .add{
+    width:100%;border:1px dashed #cbd5e1;background:#f8fafc;color:#334155;
+    min-height:44px;border-radius:12px;font-size:15px;font-weight:600;
+  }
+  .total-line{
+    display:flex;justify-content:space-between;align-items:center;
+    border-top:1px solid var(--line);padding-top:12px;margin-top:10px;font-weight:700
+  }
+  .income-grid{display:grid;grid-template-columns:1fr 150px;gap:10px}
+  .income-grid input{font-size:18px}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{
+    border:0;border-radius:13px;min-height:48px;padding:10px 12px;
+    font-size:15px;font-weight:700;
+  }
+  .btn.primary{background:var(--primary);color:#fff}
+  .btn.light{background:#eef2ff;color:#3730a3}
+  .btn.danger{background:#fee2e2;color:#991b1b}
+  .btn.share{background:#ecfdf5;color:#065f46}
+  .status{
+    margin-top:10px;padding:12px;border-radius:12px;background:#f8fafc;
+    font-size:14px;line-height:1.5;color:#374151
+  }
+  .ratio-bar{
+    height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:8px
+  }
+  .ratio-fill{height:100%;width:0;background:var(--fixed);transition:.25s}
+  .footer{font-size:12px;color:#9ca3af;text-align:center;margin-top:16px;line-height:1.5}
+  @media(max-width:520px){
+    .wrap{padding:12px 10px 50px}
+    .card{padding:14px;border-radius:16px}
+    .month-row{grid-template-columns:1fr}
+    .summary{grid-template-columns:1fr 1fr}
+    .metric .value{font-size:19px}
+    .row{grid-template-columns:minmax(0,1fr) 112px 32px}
+    .income-grid{grid-template-columns:1fr 125px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>บัญชีรายรับ–รายจ่าย</h1>
+  <div class="sub">Monthly Cash Flow • เน้นดู Fixed Cost ก้อนใหญ่</div>
+
+  <div class="card">
+    <div class="month-row">
+      <div>
+        <label>เดือน</label>
+        <select id="month">
+          <option>มกราคม</option><option>กุมภาพันธ์</option><option>มีนาคม</option>
+          <option>เมษายน</option><option>พฤษภาคม</option><option>มิถุนายน</option>
+          <option>กรกฎาคม</option><option>สิงหาคม</option><option>กันยายน</option>
+          <option>ตุลาคม</option><option>พฤศจิกายน</option><option>ธันวาคม</option>
+        </select>
+      </div>
+      <div>
+        <label>ปี</label>
+        <input id="year" type="number" inputmode="numeric">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><h2>💰 รายรับ</h2><span class="badge">Income</span></div>
+    <div class="income-grid">
+      <input id="incomeName" value="รายรับสุทธิ" aria-label="ชื่อรายรับ">
+      <input id="income" class="amount" type="number" inputmode="decimal" placeholder="0">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><h2>📊 สรุปเดือนนี้</h2><span class="badge">Summary</span></div>
+    <div class="summary">
+      <div class="metric fixed">
+        <div class="name">Fixed Cost</div>
+        <div id="sumFixed" class="value">฿0</div>
+        <div id="pctFixed" class="pct">0% ของรายรับ</div>
+      </div>
+      <div class="metric variable">
+        <div class="name">Variable Cost</div>
+        <div id="sumVariable" class="value">฿0</div>
+        <div id="pctVariable" class="pct">0% ของรายรับ</div>
+      </div>
+      <div class="metric saving">
+        <div class="name">ออม / ลงทุน</div>
+        <div id="sumSaving" class="value">฿0</div>
+        <div id="pctSaving" class="pct">0% ของรายรับ</div>
+      </div>
+      <div class="metric remaining">
+        <div class="name">เงินเหลือ</div>
+        <div id="sumRemaining" class="value">฿0</div>
+        <div id="pctRemaining" class="pct">0% ของรายรับ</div>
+      </div>
+    </div>
+    <div style="margin-top:13px;font-size:13px;color:#6b7280">Fixed Cost Ratio</div>
+    <div class="ratio-bar"><div id="ratioFill" class="ratio-fill"></div></div>
+    <div id="ratioStatus" class="status">กรอกรายรับและ Fixed Cost เพื่อดูสัดส่วนภาระประจำ</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><h2>🔴 Fixed Cost</h2><span class="badge">ต้องจ่ายประจำ</span></div>
+    <div id="fixedRows"></div>
+    <button class="add" onclick="addRow('fixed')">＋ เพิ่ม Fixed Cost</button>
+    <div class="total-line"><span>รวม Fixed Cost</span><span id="totalFixed">฿0</span></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><h2>🟠 Variable Cost</h2><span class="badge">ปรับลดได้</span></div>
+    <div id="variableRows"></div>
+    <button class="add" onclick="addRow('variable')">＋ เพิ่ม Variable Cost</button>
+    <div class="total-line"><span>รวม Variable Cost</span><span id="totalVariable">฿0</span></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title"><h2>🟢 เงินออม / ลงทุน</h2><span class="badge">Saving</span></div>
+    <div id="savingRows"></div>
+    <button class="add" onclick="addRow('saving')">＋ เพิ่มเงินออม / ลงทุน</button>
+    <div class="total-line"><span>รวมออม / ลงทุน</span><span id="totalSaving">฿0</span></div>
+  </div>
+
+  <div class="card">
+    <div class="actions">
+      <button class="btn primary" onclick="saveData()">บันทึกในเครื่อง</button>
+      <button class="btn share" onclick="copySummary()">คัดลอกสรุป</button>
+      <button class="btn light" onclick="downloadCSV()">Export CSV</button>
+      <button class="btn danger" onclick="resetData()">ล้างข้อมูล</button>
+    </div>
+    <div class="footer">
+      ข้อมูลที่กด “บันทึกในเครื่อง” จะเก็บใน Browser ของอุปกรณ์นี้ด้วย Local Storage<br>
+      ไฟล์นี้ไม่ส่งข้อมูลออกไปภายนอก
+    </div>
+  </div>
+</div>
+
+<script>
+const defaults = {
+  fixed:[
+    ["ผ่อนบ้าน / ช่วยค่าบ้าน",""],
+    ["ผ่อนรถ",""],
+    ["ประกัน",""],
+    ["มือถือ / Internet",""],
+    ["Subscription",""]
+  ],
+  variable:[
+    ["อาหาร",""],
+    ["น้ำมัน / ทางด่วน",""],
+    ["กาแฟ / กินข้างนอก",""],
+    ["ค่าไฟ / น้ำ",""],
+    ["Shopping / ของใช้",""]
+  ],
+  saving:[
+    ["ลงทุนระยะยาว",""],
+    ["เงินสำรอง / เงินสด",""]
+  ]
+};
+
+const state = {fixed:[], variable:[], saving:[]};
+
+function fmt(n){
+  return "฿"+(Number(n)||0).toLocaleString("th-TH",{maximumFractionDigits:0});
+}
+function pct(n, income){
+  if(!income) return "0%";
+  return ((n/income)*100).toFixed(1)+"%";
+}
+function makeRow(type, name="", amount=""){
+  const obj={id:Date.now()+Math.random(),name,amount};
+  state[type].push(obj);
+  renderRows(type);
+  calc();
+}
+function addRow(type){ makeRow(type,"",""); }
+
+function renderRows(type){
+  const box=document.getElementById(type+"Rows");
+  box.innerHTML="";
+  state[type].forEach((r,i)=>{
+    const div=document.createElement("div");
+    div.className="row";
+    div.innerHTML=`
+      <input aria-label="รายการ" placeholder="ชื่อรายการ" value="${escapeHtml(r.name)}"
+        oninput="state['${type}'][${i}].name=this.value; calc()">
+      <input aria-label="จำนวนเงิน" class="amount" type="number" inputmode="decimal"
+        placeholder="0" value="${r.amount}"
+        oninput="state['${type}'][${i}].amount=this.value; calc()">
+      <button class="del" aria-label="ลบรายการ" onclick="removeRow('${type}',${i})">×</button>
+    `;
+    box.appendChild(div);
+  });
+}
+function removeRow(type,i){
+  state[type].splice(i,1);
+  renderRows(type); calc();
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+}
+function total(type){
+  return state[type].reduce((a,r)=>a+(Number(r.amount)||0),0);
+}
+function calc(){
+  const income=Number(document.getElementById("income").value)||0;
+  const f=total("fixed"), v=total("variable"), s=total("saving");
+  const rem=income-f-v-s;
+
+  document.getElementById("sumFixed").textContent=fmt(f);
+  document.getElementById("sumVariable").textContent=fmt(v);
+  document.getElementById("sumSaving").textContent=fmt(s);
+  document.getElementById("sumRemaining").textContent=fmt(rem);
+
+  document.getElementById("pctFixed").textContent=pct(f,income)+" ของรายรับ";
+  document.getElementById("pctVariable").textContent=pct(v,income)+" ของรายรับ";
+  document.getElementById("pctSaving").textContent=pct(s,income)+" ของรายรับ";
+  document.getElementById("pctRemaining").textContent=pct(rem,income)+" ของรายรับ";
+
+  document.getElementById("totalFixed").textContent=fmt(f);
+  document.getElementById("totalVariable").textContent=fmt(v);
+  document.getElementById("totalSaving").textContent=fmt(s);
+
+  const ratio=income ? (f/income*100) : 0;
+  document.getElementById("ratioFill").style.width=Math.min(ratio,100)+"%";
+
+  let txt="กรอกรายรับและ Fixed Cost เพื่อดูสัดส่วนภาระประจำ";
+  if(income){
+    if(ratio<30) txt=`Fixed Cost ${ratio.toFixed(1)}% — ภาระประจำค่อนข้างต่ำ มีความยืดหยุ่นสูง`;
+    else if(ratio<40) txt=`Fixed Cost ${ratio.toFixed(1)}% — อยู่ในระดับค่อนข้างดี`;
+    else if(ratio<50) txt=`Fixed Cost ${ratio.toFixed(1)}% — เริ่มสูง ควรดู Cash Flow ก่อนเพิ่มหนี้ก้อนใหม่`;
+    else if(ratio<60) txt=`Fixed Cost ${ratio.toFixed(1)}% — ภาระค่อนข้างสูง ควรรักษาเงินสำรอง`;
+    else txt=`Fixed Cost ${ratio.toFixed(1)}% — Cash Flow ตึง ควรระวังการเพิ่มภาระประจำ`;
+  }
+  document.getElementById("ratioStatus").textContent=txt;
+}
+function payload(){
+  return {
+    month:document.getElementById("month").value,
+    year:document.getElementById("year").value,
+    incomeName:document.getElementById("incomeName").value,
+    income:document.getElementById("income").value,
+    state
+  };
+}
+function saveData(){
+  localStorage.setItem("monthlyCashflowV1",JSON.stringify(payload()));
+  alert("บันทึกข้อมูลในเครื่องแล้ว");
+}
+function loadData(){
+  const saved=localStorage.getItem("monthlyCashflowV1");
+  if(saved){
+    try{
+      const d=JSON.parse(saved);
+      document.getElementById("month").value=d.month||"สิงหาคม";
+      document.getElementById("year").value=d.year||new Date().getFullYear();
+      document.getElementById("incomeName").value=d.incomeName||"รายรับสุทธิ";
+      document.getElementById("income").value=d.income||"";
+      ["fixed","variable","saving"].forEach(t=>{
+        state[t]=Array.isArray(d.state?.[t])?d.state[t]:[];
+        renderRows(t);
+      });
+      calc(); return;
+    }catch(e){}
+  }
+  document.getElementById("year").value=new Date().getFullYear();
+  const months=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+  document.getElementById("month").value=months[new Date().getMonth()];
+  ["fixed","variable","saving"].forEach(t=>{
+    state[t]=defaults[t].map(x=>({id:Date.now()+Math.random(),name:x[0],amount:x[1]}));
+    renderRows(t);
+  });
+  calc();
+}
+function resetData(){
+  if(!confirm("ล้างข้อมูลทั้งหมดและเริ่มใหม่หรือไม่?")) return;
+  localStorage.removeItem("monthlyCashflowV1");
+  location.reload();
+}
+function copySummary(){
+  const income=Number(document.getElementById("income").value)||0;
+  const f=total("fixed"), v=total("variable"), s=total("saving"), rem=income-f-v-s;
+  const text=`บัญชีรายรับรายจ่าย ${document.getElementById("month").value} ${document.getElementById("year").value}
+รายรับสุทธิ: ${fmt(income)}
+Fixed Cost: ${fmt(f)} (${pct(f,income)})
+Variable Cost: ${fmt(v)} (${pct(v,income)})
+ออม/ลงทุน: ${fmt(s)} (${pct(s,income)})
+เงินเหลือ: ${fmt(rem)} (${pct(rem,income)})`;
+  navigator.clipboard?.writeText(text).then(()=>alert("คัดลอกสรุปแล้ว")).catch(()=>prompt("คัดลอกข้อความด้านล่าง",text));
+}
+function csvCell(v){ return '"'+String(v??"").replace(/"/g,'""')+'"'; }
+function downloadCSV(){
+  const income=Number(document.getElementById("income").value)||0;
+  let rows=[["เดือน",document.getElementById("month").value],["ปี",document.getElementById("year").value],["ประเภท","รายการ","จำนวนเงิน"]];
+  rows.push(["Income",document.getElementById("incomeName").value,income]);
+  ["fixed","variable","saving"].forEach(t=>{
+    state[t].forEach(r=>rows.push([t,r.name,Number(r.amount)||0]));
+  });
+  const csv="\uFEFF"+rows.map(r=>r.map(csvCell).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`cashflow_${document.getElementById("year").value}_${document.getElementById("month").value}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+document.getElementById("income").addEventListener("input",calc);
+document.getElementById("month").addEventListener("change",calc);
+document.getElementById("year").addEventListener("input",calc);
+loadData();
+</script>
+</body>
+</html>
